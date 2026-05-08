@@ -22,7 +22,7 @@ export function CustomCursor() {
   const [isMobile, setIsMobile] = useState(false);
   const dotRef = useRef<HTMLDivElement>(null);
   const circleRef = useRef<HTMLDivElement>(null);
-  const animationIdRef = useRef<number>();
+  const animationIdRef = useRef<number>(0);
 
   // Check if device is mobile/touch
   useEffect(() => {
