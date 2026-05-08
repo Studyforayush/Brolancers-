@@ -1,4 +1,32 @@
-import server from "../dist/server/index.js";
+import { promises as fs } from "node:fs";
+import { join } from "node:path";
+
+async function getServerModule() {
+  try {
+    // Try loading from .server-dist (Vercel production)
+    const modulePath = join(process.cwd(), "api", ".server-dist", "index.js");
+    const module = await import(modulePath);
+    return module.default;
+  } catch (e1) {
+    try {
+      // Try from dist (local dev/preview)
+      const modulePath = join(process.cwd(), "dist", "server", "index.js");
+      const module = await import(modulePath);
+      return module.default;
+    } catch (e2) {
+      console.error("Failed to load server module from both paths", e1, e2);
+      throw new Error("Could not load server module");
+    }
+  }
+}
+
+let cachedServer: any = null;
+
+async function getServer() {
+  if (cachedServer) return cachedServer;
+  cachedServer = await getServerModule();
+  return cachedServer;
+}
 
 function buildRequest(req: any) {
   const host = req.headers?.host ?? "localhost";
@@ -23,14 +51,21 @@ function buildRequest(req: any) {
 }
 
 export default async function handler(req: any, res: any) {
-  const request = buildRequest(req);
-  const response = await server.fetch(request, undefined, undefined);
+  try {
+    const server = await getServer();
+    const request = buildRequest(req);
+    const response = await server.fetch(request, undefined, undefined);
 
-  response.headers.forEach((value, name) => {
-    res.setHeader(name, value);
-  });
+    response.headers.forEach((value, name) => {
+      res.setHeader(name, value);
+    });
 
-  res.statusCode = response.status;
-  const buffer = Buffer.from(await response.arrayBuffer());
-  res.end(buffer);
+    res.statusCode = response.status;
+    const buffer = Buffer.from(await response.arrayBuffer());
+    res.end(buffer);
+  } catch (error) {
+    console.error("SSR Error:", error);
+    res.statusCode = 500;
+    res.end("Internal Server Error");
+  }
 }

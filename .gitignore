@@ -20,8 +20,9 @@ dist-ssr
 .wrangler/
 .dev.vars
 
-# Generated Vercel static assets
+# Generated Vercel static assets and server dist
 public/assets
+api/.server-dist
 
 # Editor directories and files
 .vscode/*
